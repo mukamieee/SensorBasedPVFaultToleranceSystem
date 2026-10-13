@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "author": "Anonymous maker",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-mega", "id": "mega", "top": 125.4, "left": 121.2, "attrs": {} },
+    {
+      "type": "board-ssd1306",
+      "id": "oled1",
+      "top": 166.34,
+      "left": -18.97,
+      "attrs": { "i2cAddress": "0x3c" }
+    },
+    { "type": "wokwi-membrane-keypad", "id": "keypad1", "top": -318.8, "left": 524, "attrs": {} },
+    {
+      "type": "wokwi-microsd-card",
+      "id": "sd1",
+      "top": 384.23,
+      "left": 182.47,
+      "attrs": { "image": "sdcard" }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_volt",
+      "top": -1.3,
+      "left": 844.6,
+      "attrs": { "value": "512" }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_curr",
+      "top": 123.5,
+      "left": 844.6,
+      "attrs": { "value": "512" }
+    },
+    {
+      "type": "wokwi-ntc-temperature-sensor",
+      "id": "temp1",
+      "top": 79.4,
+      "left": 959.4,
+      "attrs": {}
+    },
+    { "type": "wokwi-relay-module", "id": "relay1", "top": 403.4, "left": 576, "attrs": {} }
+  ],
+  "connections": [
+    [ "oled1:GND", "mega:GND.1", "black", [ "v0" ] ],
+    [ "oled1:VCC", "mega:5V.1", "red", [ "v0" ] ],
+    [ "oled1:SCL", "mega:21", "green", [ "v0" ] ],
+    [ "oled1:SDA", "mega:20", "green", [ "v0" ] ],
+    [ "keypad1:R1", "mega:9", "green", [ "v0" ] ],
+    [ "keypad1:R2", "mega:8", "green", [ "v0" ] ],
+    [ "keypad1:R3", "mega:7", "green", [ "v0" ] ],
+    [ "keypad1:R4", "mega:6", "green", [ "v0" ] ],
+    [ "keypad1:C1", "mega:5", "green", [ "v0" ] ],
+    [ "keypad1:C2", "mega:4", "green", [ "v0" ] ],
+    [ "keypad1:C3", "mega:3", "green", [ "v0" ] ],
+    [ "keypad1:C4", "mega:2", "green", [ "v0" ] ],
+    [ "sd1:GND", "mega:GND.2", "black", [ "h0" ] ],
+    [ "sd1:VCC", "mega:5V", "red", [ "h0" ] ],
+    [ "sd1:DI", "mega:51", "green", [ "h0" ] ],
+    [ "sd1:DO", "mega:50", "green", [ "h0" ] ],
+    [ "sd1:SCK", "mega:52", "green", [ "h0" ] ],
+    [ "sd1:CS", "mega:53", "green", [ "h0" ] ],
+    [ "pot_volt:GND", "mega:GND.2", "black", [ "v0" ] ],
+    [ "pot_volt:VCC", "mega:5V", "red", [ "v0" ] ],
+    [ "pot_volt:SIG", "mega:A0", "orange", [ "v0" ] ],
+    [ "pot_curr:GND", "mega:GND.2", "black", [ "v0" ] ],
+    [ "pot_curr:VCC", "mega:5V", "red", [ "v0" ] ],
+    [ "pot_curr:SIG", "mega:A1", "blue", [ "v0" ] ],
+    [ "temp1:GND", "mega:GND.2", "black", [ "v0" ] ],
+    [ "temp1:VCC", "mega:5V", "red", [ "v0" ] ],
+    [ "temp1:OUT", "mega:A2", "purple", [ "v0" ] ],
+    [ "relay1:GND", "mega:GND.2", "black", [ "v0" ] ],
+    [ "relay1:VCC", "mega:5V", "red", [ "v0" ] ],
+    [ "relay1:IN", "mega:22", "yellow", [ "v0" ] ]
+  ],
+  "dependencies": {}
+}
