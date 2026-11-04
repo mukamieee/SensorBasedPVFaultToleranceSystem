@@ -1,4 +1,4 @@
-#pragma once
+#pragma once //called during compilatiton so header is called once
 #include <Arduino.h>
 
 // Import all system modules
@@ -13,8 +13,10 @@
 
 class SystemController {
   private:
+    const String NODE_ID = "NODE_001";
     String currentInput;   
-    bool isUnlocked;       
+    bool isUnlocked; 
+    bool isPinSetupComplete;
     unsigned long lastDisplayUpdate; 
     unsigned long lastLogTime; 
 
@@ -30,11 +32,15 @@ class SystemController {
 
   public:
     SystemController() : 
-      auth("1234"), safety(60.0, 0.0), relay(22), 
+      auth(), 
+      safety(60.0, 0.0), relay(22), 
       sensors(A0, A1, A2), sdManager(53) 
     {
-      currentInput = ""; isUnlocked = false;
-      lastDisplayUpdate = 0; lastLogTime = 0;
+      currentInput = ""; 
+      isUnlocked = false;
+      isPinSetupComplete = false;
+      lastDisplayUpdate = 0; 
+      lastLogTime = 0;
     }
 
     void initializeSystem() {
@@ -45,11 +51,20 @@ class SystemController {
       delay(1000); 
 
       if (!sdManager.init()) {
-        ui.updateScreen("SD ERROR", "Initialization failed"); delay(2000);
+        ui.updateScreen("SD FATAL", "Insert Card & Reboot"); 
+        while(1); // Halt system if no SD is present (Cannot run without DB)
+      } 
+
+      SD.remove("pin.csv");
+      
+      // CHECK DATABASE FOR EXISTING PIN
+      if (sdManager.hasSavedPIN()) {
+        auth.loadSavedHash(sdManager.readPINHash());
+        isPinSetupComplete = true; // Skip setup screen
+        ui.updateScreen("System Locked", "Enter PIN:");
       } else {
-        ui.updateScreen("SD READY", "Card initialized"); delay(2000);
+        isPinSetupComplete = false; // Trigger setup screen
       }
-      ui.updateScreen("System Locked", "Enter PIN:");
     }
 
     void executeDiagnosisLoop() {
@@ -58,19 +73,25 @@ class SystemController {
       float panelTemp = sensors.getTemperature();
       bool dangerPresent = safety.evaluateReadings(panelTemp, currentAmps);
 
-      // --- LOGGING ---
+      
+      // --- RELATIONAL TELEMETRY LOGGING (Updated for ERD) ---
       if (millis() - lastLogTime > 5000) {
         lastLogTime = millis();
-        sdManager.logTelemetry(currentVoltage, currentAmps, panelTemp);
+        
+        // NEW LOGIC: Only log telemetry if the system is NOT in a hard lockout
+        if (!faultManager.isHardLocked()) {
+          sdManager.logTelemetry(NODE_ID, currentVoltage, currentAmps, panelTemp, faultManager.isFaultTriggered(), relay.getIsIsolated(), faultManager.getFaultCounter());
+        }
       }
 
-      // --- ESCALATION STATE MACHINE ---
+      // --- ESCALATION STATE MACHINE (Updated to logMaintenance for ERD) ---
       if (!faultManager.isFaultTriggered() && !faultManager.isHardLocked()) {
         if (dangerPresent) {
           String reason = (currentAmps < 0.0) ? "REVERSE CURRENT" : "THERMAL HOTSPOT";
           faultManager.triggerFault(reason);
           relay.openCircuit(); 
-          sdManager.logEvent("FAULT_DETECTED", "ID:" + String(faultManager.getFaultCounter()) + " Reason: " + reason + " | Relay OPENED");
+          
+          sdManager.logMaintenance(NODE_ID, faultManager.getFaultCounter(), "FAULT_DETECTED", reason);
         }
       }
 
@@ -78,20 +99,35 @@ class SystemController {
         if (!dangerPresent) {
           faultManager.autoRecover();
           relay.closeCircuit();
-          sdManager.logEvent("AUTO_RECOVERED", "ID:" + String(faultManager.getFaultCounter()) + " Danger cleared | Relay CLOSED");
+          
+          sdManager.logMaintenance(NODE_ID, faultManager.getFaultCounter(), "AUTO_RECOVERED", "RELAY_CLOSED_SYSTEM_SAFE");
         } 
         else if (faultManager.checkEscalation()) {
-          sdManager.logEvent("HARD_LOCKOUT", "ID:" + String(faultManager.getFaultCounter()) + " Grace period expired. Tech required.");
+          sdManager.logMaintenance(NODE_ID, faultManager.getFaultCounter(), "HARD_LOCKOUT", "TECHNICIAN_REQUIRED");
         }
       }
 
       // --- KEYPAD ROUTING ---
       char customKey = keypad.getKey();
       if (customKey) {
-        if (!isUnlocked) {
+        
+        // NEW: If system is brand new and needs a PIN
+        if (!isPinSetupComplete) {
+          if (customKey == '#' && currentInput.length() >= 4) {
+            String newHash = auth.setupNewPIN(currentInput);
+            sdManager.savePINHash(newHash); // Write to database
+            isPinSetupComplete = true;
+            currentInput = "";
+          } 
+          else if (customKey != '*' && customKey != '#') {
+            if (currentInput.length() < 4) currentInput += customKey; 
+          }
+        }
+        // EXISTING: Normal Locked State
+        else if (!isUnlocked) {
           if (customKey == '#') {
             bool authSuccess = auth.validatePIN(currentInput);
-            sdManager.logAccess(authSuccess);
+            sdManager.logAccess(NODE_ID, authSuccess, "LOGIN_ATTEMPT"); 
             if (authSuccess) isUnlocked = true;
             currentInput = "";
           } 
@@ -99,14 +135,16 @@ class SystemController {
             if (currentInput.length() < 4) currentInput += customKey; 
           }
         } 
+        // EXISTING: Unlocked State
         else {
           if (customKey == '*') {
             isUnlocked = false; currentInput = "";
+            sdManager.logAccess(NODE_ID, true, "MANUAL_LOGOUT");
           } 
           else if (customKey == '#' && faultManager.isHardLocked() && !dangerPresent) {
             faultManager.techReset();
             relay.closeCircuit(); 
-            sdManager.logEvent("TECH_RESET", "ID:" + String(faultManager.getFaultCounter()) + " PIN verified. Hardware safe | Relay CLOSED");
+            sdManager.logMaintenance(NODE_ID, faultManager.getFaultCounter(), "TECH_RESET_APPLIED", "RELAY_CLOSED_SYSTEM_SAFE");
           }
         }
       }
@@ -114,7 +152,10 @@ class SystemController {
       // --- UI UPDATES ---
       if (millis() - lastDisplayUpdate > 200) {
         lastDisplayUpdate = millis();
-        if (!isUnlocked) {
+        
+        if (!isPinSetupComplete) {
+          ui.renderSetupScreen(currentInput); // Show new setup screen
+        } else if (!isUnlocked) {
           ui.renderLockScreen(currentInput);
         } else if (faultManager.isHardLocked()) {
           ui.renderFaultScreen(faultManager.getFaultReason(), dangerPresent);
@@ -125,5 +166,5 @@ class SystemController {
         }
         ui.displayUpdate();
       }
-    }
-};
+    } 
+}; 

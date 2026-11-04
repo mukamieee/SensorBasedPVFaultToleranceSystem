@@ -23,6 +23,19 @@ class UserInterface {
       display.setCursor(0, 30); display.println(line2);
       display.display();
     }
+
+    void renderSetupScreen(String currentInput) {
+      display.clearDisplay();
+      display.setCursor(0, 0);  display.println("--- SYSTEM SETUP ---");
+      display.setCursor(0, 20); display.println("Create 4-Digit PIN:");
+      
+      String maskedPIN = "";
+      for (unsigned int i = 0; i < currentInput.length(); i++) maskedPIN += "*";
+      
+      display.setCursor(0, 36); display.println(maskedPIN);
+      display.setCursor(0, 50); display.println("Press # to Save");
+    }
+
     void renderLockScreen(String currentInput) {
       display.clearDisplay();
       display.setCursor(0, 10); display.println("System Locked");
