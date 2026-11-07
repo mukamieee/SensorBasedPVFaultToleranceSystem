@@ -41,10 +41,8 @@ class SDFileManager {
       Serial.println("[MAINTENANCE LOG] " + eventEntry);
     }
 
-    // Dynamic PIN Management
-    bool hasSavedPIN() {
-      return SD.exists("pin.csv");
-    }
+    // Dynamic PIN Management (SECURITY_CREDENTIAL)
+    bool hasSavedPIN() { return SD.exists("pin.csv"); }
 
     String readPINHash() {
       File pinFile = SD.open("pin.csv", FILE_READ);
@@ -65,5 +63,39 @@ class SDFileManager {
         pinFile.close();
       }
       Serial.println("[SECURITY] New PIN Hash saved.");
+    }
+
+    // NEW: Dynamic Configuration Management (SAFETY_THRESHOLD)
+    bool hasConfiguration() { 
+      return SD.exists("config.csv"); 
+    }
+
+    // Saves the calculated thresholds to the SD Card
+    void saveConfiguration(float maxTemp, float maxCurrent) {
+      if (SD.exists("config.csv")) SD.remove("config.csv");
+      File configFile = SD.open("config.csv", FILE_WRITE);
+      if (configFile) {
+        configFile.print(maxTemp);
+        configFile.print(",");
+        configFile.println(maxCurrent);
+        configFile.close();
+      }
+      Serial.println("[SYSTEM] New hardware thresholds saved to config.csv.");
+    }
+
+    // Reads the thresholds from the SD card and passes them back via reference variables
+    bool loadConfiguration(float &outTemp, float &outCurrent) {
+      File configFile = SD.open("config.csv", FILE_READ);
+      if (configFile) {
+        String tempStr = configFile.readStringUntil(',');
+        String currentStr = configFile.readStringUntil('\n');
+        
+        outTemp = tempStr.toFloat();
+        outCurrent = currentStr.toFloat();
+        
+        configFile.close();
+        return true;
+      }
+      return false;
     }
 };
