@@ -91,14 +91,29 @@ class UserInterface {
       display.println("Auto-Recovering...");
     }
 
-    void renderDashboard(float v, float i, float t) {
-      display.clearDisplay();
-      display.setCursor(0, 0);
-      display.println("--- PV MONITORING ---");
-      display.print("Voltage : "); display.print(v); display.println(" V");
-      display.print("Current : "); display.print(i); display.println(" A");
-      display.print("Temp    : "); display.print(t); display.println(" C");
-    }
+    
+  void renderDashboard(float v, float i, float t) {
+
+    display.clearDisplay();
+    display.setCursor(0, 0);
+
+    display.println("--- PV MONITORING ---");
+
+    display.print("Voltage : ");
+    display.print(v);
+    display.println(" V");
+
+    display.print("Current : ");
+    display.print(i);
+    display.println(" A");
+
+    display.print("Temp    : ");
+    display.print(t);
+    display.println(" C");
+
+    display.println("B: Technician Menu");
+  }
+
 
     void renderConfigInput(String inputW, String inputV, bool typingVoltage) {
       display.clearDisplay();
@@ -130,4 +145,29 @@ class UserInterface {
     }
 
     void displayUpdate() { display.display(); }
+
+    
+  // Displays the technician menu
+  void renderTechnicianMenu(bool sdLoggingEnabled, bool hardLocked) {
+
+    display.clearDisplay();
+    display.setCursor(0, 0);
+
+    display.println("--- TECH MENU ---");
+    display.println("B: Configure limits");
+
+    if (sdLoggingEnabled) {
+      display.println("C: Remove SD card");
+    } else {
+      display.println("C: SD already removed");
+    }
+
+    if (hardLocked) {
+      display.println("#: Reset system");
+    }
+
+    display.println("*: Back");
+    display.display();
+  }
+
 };
