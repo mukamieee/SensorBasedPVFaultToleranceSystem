@@ -10,8 +10,8 @@ class KeypadManager {
       {'7','8','9','C'},
       {'*','0','#','D'}
     };
-    byte rowPins[4] = {9, 8, 7, 6};
-    byte colPins[4] = {5, 4, 3, 2};
+    byte rowPins[4] = {2, 3, 4, 5};
+    byte colPins[4] = {6, 7, 8, 9};
     Keypad customKeypad;
 
   public:
