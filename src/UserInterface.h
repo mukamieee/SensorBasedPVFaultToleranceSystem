@@ -92,7 +92,7 @@ class UserInterface {
     }
 
     
-  void renderDashboard(float v, float i, float t) {
+  void renderDashboard(float v, float i, float t, uint8_t probeCount = 0) {
 
     display.clearDisplay();
     display.setCursor(0, 0);
@@ -100,19 +100,27 @@ class UserInterface {
     display.println("--- PV MONITORING ---");
 
     display.print("Voltage : ");
-    display.print(v);
+    display.print(v, 1);
     display.println(" V");
 
     display.print("Current : ");
-    display.print(i);
+    display.print(i, 2);
     display.println(" A");
 
-    display.print("Temp    : ");
-    display.print(t);
-    display.println(" C");
+    display.print("Temp(avg): ");
+    if (t == -127.0) {
+        display.println("--");
+    } else {
+        display.print(t, 1);
+        display.println(" C");
+    }
+
+    display.print("Probes   : ");
+    display.print(probeCount);
+    display.println("/4");
 
     display.println("B: Technician Menu");
-  }
+}
 
 
     void renderConfigInput(String inputW, String inputV, bool typingVoltage) {
@@ -148,26 +156,67 @@ class UserInterface {
 
     
   // Displays the technician menu
-  void renderTechnicianMenu(bool sdLoggingEnabled, bool hardLocked) {
+    void renderTechnicianMenu(bool sdLoggingEnabled, bool hardLocked) {
 
-    display.clearDisplay();
-    display.setCursor(0, 0);
+        display.clearDisplay();
+        display.setCursor(0, 0);
 
-    display.println("--- TECH MENU ---");
-    display.println("B: Configure limits");
+        display.println("--- TECH MENU ---");
+        display.println("A: Temperature details");
+        display.println("B: Configure limits");
 
-    if (sdLoggingEnabled) {
-      display.println("C: Remove SD card");
-    } else {
-      display.println("C: SD already removed");
+        if (sdLoggingEnabled) {
+            display.println("C: Remove SD card");
+        } else {
+            display.println("C: SD already removed");
+        }
+
+        if (hardLocked) {
+            display.println("#: Reset system");
+        }
+
+        display.println("*: Back");
+        display.display();
     }
 
-    if (hardLocked) {
-      display.println("#: Reset system");
-    }
+      // Displays individual temperature readings
+    void renderTemperatureDetails(
+        float t1, float t2, float t3, float t4
+    ) {
+        display.clearDisplay();
+        display.setCursor(0, 0);
 
-    display.println("*: Back");
-    display.display();
-  }
+        display.println("--- TEMP DETAILS ---");
+
+        display.print("T1: ");
+        if (t1 == -127.0) display.println("--");
+        else {
+            display.print(t1, 1);
+            display.println(" C");
+        }
+
+        display.print("T2: ");
+        if (t2 == -127.0) display.println("--");
+        else {
+            display.print(t2, 1);
+            display.println(" C");
+        }
+
+        display.print("T3: ");
+        if (t3 == -127.0) display.println("--");
+        else {
+            display.print(t3, 1);
+            display.println(" C");
+        }
+
+        display.print("T4: ");
+        if (t4 == -127.0) display.println("--");
+        else {
+            display.print(t4, 1);
+            display.println(" C");
+        }
+
+        display.println("*: Back");
+    }
 
 };
