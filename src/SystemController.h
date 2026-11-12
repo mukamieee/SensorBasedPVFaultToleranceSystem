@@ -24,6 +24,7 @@ class SystemController {
 
     unsigned long lastDisplayUpdate;
     unsigned long lastLogTime;
+    unsigned long lastTemperatureUpdate;
 
     // SD card status
     bool sdAvailable;
@@ -33,6 +34,7 @@ class SystemController {
     bool inTechnicianMenu;
     bool inConfigMode;
     bool typingVoltage;
+    bool inTemperatureDetails;
 
     // Safe-eject confirmation
     bool sdEjectConfirmed;
@@ -183,6 +185,7 @@ class SystemController {
       inTechnicianMenu = false;
       inConfigMode = false;
       typingVoltage = false;
+      inTemperatureDetails = false;
 
       sdEjectConfirmed = false;
 
@@ -191,6 +194,7 @@ class SystemController {
 
       lastDisplayUpdate = 0;
       lastLogTime = 0;
+      lastTemperatureUpdate = 0;
     }
 
 
@@ -283,16 +287,54 @@ class SystemController {
     // MAIN DIAGNOSIS AND CONTROL LOOP
     // ------------------------------------------------
     void executeDiagnosisLoop() {
-
       // READ SENSOR VALUES
-      float currentVoltage = sensors.getVoltage();
-      float currentAmps = sensors.getCurrent();
-      float panelTemp = sensors.getTemperature();
+        float currentVoltage = sensors.getVoltage();
+        float currentAmps = sensors.getCurrent();
+
+        // Refresh all temperature probes once per second
+        if (millis() - lastTemperatureUpdate >= 1000) {
+            sensors.updateTemperatures();
+            lastTemperatureUpdate = millis();
+        }
+
+        // Retrieve individual probe readings
+        float t1 = sensors.getTemperature(0);
+        float t2 = sensors.getTemperature(1);
+        float t3 = sensors.getTemperature(2);
+        float t4 = sensors.getTemperature(3);
+
+        // Calculate average and identify the hottest valid probe
+        float temperatureSum = 0.0;
+        float hottestTemp = -127.0;
+        uint8_t validProbeCount = 0;
+
+    for (uint8_t index = 0; index < 4; index++) {
+
+        float reading = sensors.getTemperature(index);
+
+        if (reading != -127.0) {
+
+            temperatureSum += reading;
+            validProbeCount++;
+
+            if (reading > hottestTemp) {
+                hottestTemp = reading;
+            }
+        }
+    }
+
+    // Average temperature for the dashboard
+    float panelTemp = -127.0;
+
+    if (validProbeCount > 0) {
+        panelTemp = temperatureSum / validProbeCount;
+    }
+      
 
 
       // EVALUATE SENSOR READINGS
       bool dangerPresent = safety.evaluateReadings(
-        panelTemp,
+        hottestTemp,
         currentAmps
       );
 
@@ -361,8 +403,9 @@ class SystemController {
             reason = "OVERCURRENT SURGE";
           }
 
-          else if (panelTemp > safety.getMaxTemp()) {
-            reason = "THERMAL HOTSPOT";
+          else if (hottestTemp > safety.getMaxTemp()) {
+              reason = "THERMAL HOTSPOT";
+          
           }
 
 
@@ -593,6 +636,18 @@ class SystemController {
           }
         }
 
+        // ================================================
+        // STATE 4: TEMPERATURE DETAILS
+        // ================================================
+        else if (inTemperatureDetails) {
+
+            // Return to technician menu
+            if (customKey == '*') {
+
+                inTemperatureDetails = false;
+                inTechnicianMenu = true;
+            }
+        }
 
         // ================================================
         // STATE 4: TECHNICIAN MENU
@@ -603,6 +658,12 @@ class SystemController {
           // when the danger condition has cleared.
           if (!dangerPresent) {
 
+            // A: View individual temperature readings
+            if (customKey == 'A') {
+
+                inTemperatureDetails = true;
+                inTechnicianMenu = false;
+            }
             // B: Open configuration
             if (customKey == 'B') {
 
@@ -786,7 +847,12 @@ class SystemController {
         // the danger condition has cleared.
         else if (faultManager.isHardLocked()) {
 
-          if (inTechnicianMenu && !dangerPresent) {
+          if (inTemperatureDetails && !dangerPresent) {
+
+            ui.renderTemperatureDetails(t1, t2, t3, t4);
+        }
+          
+          else if (inTechnicianMenu && !dangerPresent) {
 
             ui.renderTechnicianMenu(
               sdLoggingEnabled,
@@ -820,6 +886,13 @@ class SystemController {
             typingVoltage
           );
         }
+        // Individual temperature readings
+        else if (inTemperatureDetails) {
+
+            ui.renderTemperatureDetails(
+                t1, t2, t3, t4
+            );
+        }
 
         // Technician menu
         else if (inTechnicianMenu) {
@@ -842,7 +915,8 @@ class SystemController {
           ui.renderDashboard(
             currentVoltage,
             currentAmps,
-            panelTemp
+            panelTemp,
+            validProbeCount
           );
         }
 
