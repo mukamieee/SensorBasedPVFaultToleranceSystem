@@ -4,9 +4,9 @@ An edge-computing diagnostic node built on the Arduino Mega 2560. This system ac
 
 ## System Architecture
 * **Microcontroller:** Arduino Mega 2560
-* **Sensors:** INA219 (Current/Voltage), NTC Thermistor (Thermal $\Delta T$)
+* **Sensors:** ACS712 Current Sensors, Analogue Voltage Sensor, DS18B20 Waterproof Temperature Sensing Probe
 * **Actuation:** 5V Electromechanical Relay (10A DC)
-* **Storage:** MicroSD SPI Module (FAT32 Offline Logging)
+* **Storage:** MicroSD SPI Module (FAT32 Offline Logging), EEPROM Processor Storage
 * **UI:** 0.96" I2C OLED & 4x4 Membrane Keypad
 
 ## Core Features
